@@ -21,7 +21,7 @@ import { MOCK_FIXTURES, mockMatches } from './mock-data';
 @Injectable() export class MockWeatherApi extends WeatherApi {
   get(city: string): Observable<Weather> {
     const k = city.length;
-    return of({ rainMm: (k % 4) * 1.5, windKmh: 8 + (k % 5) * 6, tempC: 12 + (k % 8) });
+    return of({ rainMm: (k % 4) * 1.5, windKmh: 8 + (k % 5) * 6, tempC: 12 + (k % 8), source: 'mock' as const });
   }
 }
 // Corrupción / economía: valores MANUALES. No hay fuente pública fiable; edítalos aquí o conecta tu propia API.

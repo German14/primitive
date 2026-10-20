@@ -20,21 +20,24 @@ export class FootballClient {
 
   private wait(): Promise<void> {
     const now = Date.now(), at = Math.max(now, this.next);
-    this.next = at + env.apiFootball.minGapMs;
+    this.next = at + env.footballData.minGapMs;
     return new Promise(r => setTimeout(r, at - now));
   }
 
-  /** GET a API-Football; devuelve el array `response`. Cacheado y espaciado para respetar la cuota. */
-  get(path: string, params: Record<string, string | number> = {}): Observable<any[]> {
-    const key = 'af:' + path + JSON.stringify(params);
-    const hit = readCache<any[]>(key, env.apiFootball.cacheHours * 3600_000);
+  /** GET a football-data.org. Cacheado y espaciado para respetar 10 peticiones/min. */
+  get(path: string, params: Record<string, string | number> = {}): Observable<any> {
+    const key = 'fd:' + path + JSON.stringify(params);
+    const hit = readCache<any>(key, env.footballData.cacheHours * 3600_000);
     if (hit) return of(hit);
-    return new Observable<any[]>(sub => {
-      this.wait().then(() => this.http.get<any>(env.apiFootball.baseUrl + path, { params }).pipe(
-        map(r => {
-          const e = r.errors;
-          if (e && (Array.isArray(e) ? e.length : Object.keys(e).length)) throw new Error('API-Football: ' + JSON.stringify(e));
-          return r.response as any[];
+    return new Observable<any>(sub => {
+      this.wait().then(() => this.http.get(env.footballData.baseUrl + path, { params, responseType: 'text' }).pipe(
+        map(txt => {
+          if (txt.trimStart().startsWith('<'))
+            throw new Error('Recibí HTML en vez de JSON: el proxy no está activo. Reinicia con FOOTBALL_DATA_TOKEN=... npm start.');
+          const r = JSON.parse(txt);
+          if (r.errorCode || (r.message && !r.matches && !r.teams))
+            throw new Error('football-data.org: ' + (r.message ?? JSON.stringify(r)));
+          return r;
         }),
         tap(v => writeCache(key, v))
       ).subscribe(sub));

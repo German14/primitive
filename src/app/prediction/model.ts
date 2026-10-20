@@ -7,7 +7,7 @@ const avg = (xs: number[]) => xs.length ? xs.reduce((a, b) => a + b, 0) / xs.len
 const fact = (n: number): number => n <= 1 ? 1 : n * fact(n - 1);
 const pois = (k: number, l: number) => Math.exp(-l) * Math.pow(l, k) / fact(k);
 
-export function predict(f: Fixture, hh: TeamHistory, ah: TeamHistory, ref: RefereeHistory, w: Weather,
+export function predict(f: Fixture, hh: TeamHistory, ah: TeamHistory, ref: RefereeHistory, w: Weather | null,
                         fh: Factors, fa: Factors): Prediction {
   const notes: string[] = [];
   const last = (t: TeamHistory) => t.matches.slice(0, 8);
@@ -19,9 +19,13 @@ export function predict(f: Fixture, hh: TeamHistory, ah: TeamHistory, ref: Refer
   const refBias = (ref.homeWinPct - 0.45) * WEIGHTS.refereeHome * 4 + (ref.penaltiesPerMatch - 0.3) * 0.1;
   xgH *= 1 + refBias; if (Math.abs(refBias) > 0.03) notes.push(`Árbitro ${f.referee ?? '?'}: ${refBias > 0 ? 'favorece' : 'perjudica'} al local`);
 
-  // Clima: lluvia y viento bajan los goles
-  const wf = Math.max(0.7, 1 - w.rainMm * WEIGHTS.rainGoals - Math.max(0, w.windKmh - 20) * WEIGHTS.windGoals);
-  xgH *= wf; xgA *= wf; if (wf < 0.95) notes.push(`Clima adverso (${w.rainMm.toFixed(1)} mm, ${Math.round(w.windKmh)} km/h)`);
+  // Clima: lluvia, viento y calor bajan los goles. Sin previsión -> no se toca nada y se avisa.
+  if (w) {
+    const wf = Math.max(0.7, 1 - Math.min(w.rainMm, 5) * WEIGHTS.rainGoals - Math.max(0, w.windKmh - 15) * WEIGHTS.windGoals
+      - Math.max(0, w.tempC - 30) * 0.005);
+    xgH *= wf; xgA *= wf;
+    if (wf < 0.98) notes.push(`Clima (${w.rainMm.toFixed(1)} mm, ${Math.round(w.windKmh)} km/h, ${Math.round(w.tempC)}°): goles ${Math.round((1 - wf) * 100)}% menos`);
+  } else notes.push('Sin previsión de clima para esa fecha');
 
   // Factores manuales
   const adj = (x: Factors) => 1 + x.corruption * WEIGHTS.corruption + x.economic * WEIGHTS.economic;

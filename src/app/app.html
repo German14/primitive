@@ -4,8 +4,7 @@
 </header>
 <main>
   @if (error(); as e) {
-    <p class="err">No se pudieron cargar los datos: {{ e }}. Revisa la clave API_FOOTBALL_KEY y la cuota diaria.</p>
-  } @else if (preds(); as list) {
+<p class="err">No se pudieron cargar los datos: {{ e }}. Revisa que FOOTBALL_DATA_TOKEN esté definido al arrancar y que el proxy esté activo.</p>  } @else if (preds(); as list) {
     @if (!list.length) { <p>No hay partidos de las ligas configuradas en este fin de semana.</p> } @else {
     <table>
       <thead><tr><th>Partido</th><th>Árbitro</th><th>Clima</th><th class="n">1</th><th class="n">X</th><th class="n">2</th><th>Signo</th></tr></thead>
@@ -17,7 +16,7 @@
               @for (n of p.notes; track n) { <small class="note">{{ n }}</small> }
             </td>
             <td>{{ p.fixture.referee }}</td>
-            <td>{{ p.weather.tempC | number:'1.0-0' }}°, {{ p.weather.rainMm }} mm</td>
+           <td>@if (p.weather; as w) { {{ w.tempC | number:'1.0-0' }}°, {{ w.rainMm | number:'1.0-1' }} mm, {{ w.windKmh | number:'1.0-0' }} km/h<small>{{ w.place }} · {{ w.source }}</small> } @else { — }</td>
             <td class="n" [class.top]="p.sign === '1'">{{ p.p1 | percent:'1.0-0' }}</td>
             <td class="n" [class.top]="p.sign === 'X'">{{ p.pX | percent:'1.0-0' }}</td>
             <td class="n" [class.top]="p.sign === '2'">{{ p.p2 | percent:'1.0-0' }}</td>
