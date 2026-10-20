@@ -23,8 +23,8 @@ export class QuinielaService {
           forkJoin({
             hh: this.teams.get(f.homeId), 
             ah: this.teams.get(f.awayId), 
-            ref: this.refs.get(f.refereeId),
-            w: this.weather.get(f.lat, f.lon, f.kickoff), 
+            ref: this.refs.get(f.referee),
+            w: this.weather.get(f.city, f.kickoff), 
             fh: this.factors.get(f.homeId), 
             fa: this.factors.get(f.awayId)
           }).pipe(

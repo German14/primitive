@@ -24,6 +24,7 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
+          "options": { "proxyConfig": "proxy.conf.js" },
           "configurations": {
             "production": { "buildTarget": "primitive:build:production" },
             "development": { "buildTarget": "primitive:build:development" }

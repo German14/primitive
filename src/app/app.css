@@ -11,3 +11,5 @@ small { display:block; color:var(--muted); font-size:.8rem; }
 td.n { border-left:1px solid var(--line); }
 td.top { font-weight:600; outline:2px solid var(--pick); outline-offset:-4px; }
 .sign { display:inline-grid; place-items:center; width:2.2rem; height:2.2rem; border:2px solid var(--ink); font-family:'Bricolage Grotesque',sans-serif; font-weight:800; font-size:1.2rem; }
+
+.err { color:#a3261b; font-weight:600; }

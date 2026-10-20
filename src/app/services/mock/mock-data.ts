@@ -7,9 +7,9 @@ const sat = new Date(); sat.setDate(sat.getDate() + ((6 - sat.getDay() + 7) % 7 
 
 export const MOCK_FIXTURES: Fixture[] = pairs.map(([h, a], i) => ({
   id: i + 1, home: names[h], away: names[a], homeId: h, awayId: a,
-  refereeId: i % ref.length, referee: ref[i % ref.length],
+  referee: ref[i % ref.length],
   kickoff: new Date(sat.getTime() + i * 3 * 3600_000).toISOString(),
-  lat: 40.4 + (i % 5) * 0.5, lon: -3.7 + (i % 4) * 0.6, stadium: `Estadio ${names[h]}`
+  city: names[h], league: 'Mock', stadium: `Estadio ${names[h]}`
 }));
 
 // Generador determinista: mismo equipo, mismo historial.

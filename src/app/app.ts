@@ -1,7 +1,9 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe, DecimalPipe, PercentPipe } from '@angular/common';
+import { catchError, of } from 'rxjs';
 import { QuinielaService } from './services/quiniela.service';
+import { Prediction } from './models/models';
 
 @Component({
   selector: 'app-root',
@@ -10,5 +12,8 @@ import { QuinielaService } from './services/quiniela.service';
   styleUrl: './app.css'
 })
 export class App {
-  preds = toSignal(inject(QuinielaService).predictions(), { initialValue: null });
+  error = signal<string | null>(null);
+  preds = toSignal(inject(QuinielaService).predictions().pipe(
+    catchError(e => { this.error.set(String(e?.message ?? e)); return of([] as Prediction[]); })
+  ), { initialValue: null });
 }

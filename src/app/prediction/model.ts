@@ -17,7 +17,7 @@ export function predict(f: Fixture, hh: TeamHistory, ah: TeamHistory, ref: Refer
 
   // Árbitro: tendencia a favorecer al local respecto a la media (~0.45)
   const refBias = (ref.homeWinPct - 0.45) * WEIGHTS.refereeHome * 4 + (ref.penaltiesPerMatch - 0.3) * 0.1;
-  xgH *= 1 + refBias; if (Math.abs(refBias) > 0.03) notes.push(`Árbitro ${f.referee}: ${refBias > 0 ? 'favorece' : 'perjudica'} al local`);
+  xgH *= 1 + refBias; if (Math.abs(refBias) > 0.03) notes.push(`Árbitro ${f.referee ?? '?'}: ${refBias > 0 ? 'favorece' : 'perjudica'} al local`);
 
   // Clima: lluvia y viento bajan los goles
   const wf = Math.max(0.7, 1 - w.rainMm * WEIGHTS.rainGoals - Math.max(0, w.windKmh - 20) * WEIGHTS.windGoals);

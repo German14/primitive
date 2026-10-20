@@ -3,7 +3,10 @@
   <p>Predicción basada en forma de los clubes, árbitro, clima y ajustes manuales. Es una estimación, no una garantía.</p>
 </header>
 <main>
-  @if (preds(); as list) {
+  @if (error(); as e) {
+    <p class="err">No se pudieron cargar los datos: {{ e }}. Revisa la clave API_FOOTBALL_KEY y la cuota diaria.</p>
+  } @else if (preds(); as list) {
+    @if (!list.length) { <p>No hay partidos de las ligas configuradas en este fin de semana.</p> } @else {
     <table>
       <thead><tr><th>Partido</th><th>Árbitro</th><th>Clima</th><th class="n">1</th><th class="n">X</th><th class="n">2</th><th>Signo</th></tr></thead>
       <tbody>
@@ -23,7 +26,8 @@
         }
       </tbody>
     </table>
+    }
   } @else {
-    <p>Calculando predicciones…</p>
+    <p>Cargando datos reales… la primera vez puede tardar un par de minutos por el límite de 10 peticiones/min del plan gratuito; después se guardan en caché.</p>
   }
 </main>

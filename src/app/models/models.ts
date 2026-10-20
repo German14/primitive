@@ -1,12 +1,12 @@
 export interface Fixture {
   id: number; home: string; away: string; homeId: number; awayId: number;
-  refereeId: number; referee: string; kickoff: string; // ISO
-  lat: number; lon: number; stadium: string;
+  referee: string | null; kickoff: string; // ISO
+  city: string; stadium: string; league: string;
 }
 export interface PastMatch { goalsFor: number; goalsAgainst: number; home: boolean; }
 export interface TeamHistory { teamId: number; matches: PastMatch[]; }
 export interface RefereeHistory {
-  refereeId: number; matches: number;
+  referee: string | null; matches: number;
   avgYellow: number; avgRed: number; penaltiesPerMatch: number;
   homeWinPct: number; // 0..1
 }
