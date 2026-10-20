@@ -1,0 +1,29 @@
+<header>
+  <h1>Quiniela del fin de semana</h1>
+  <p>Predicción basada en forma de los clubes, árbitro, clima y ajustes manuales. Es una estimación, no una garantía.</p>
+</header>
+<main>
+  @if (preds(); as list) {
+    <table>
+      <thead><tr><th>Partido</th><th>Árbitro</th><th>Clima</th><th class="n">1</th><th class="n">X</th><th class="n">2</th><th>Signo</th></tr></thead>
+      <tbody>
+        @for (p of list; track p.fixture.id) {
+          <tr>
+            <td><strong>{{ p.fixture.home }} – {{ p.fixture.away }}</strong>
+              <small>{{ p.fixture.kickoff | date:'EEE d, HH:mm' }} · {{ p.fixture.stadium }}</small>
+              @for (n of p.notes; track n) { <small class="note">{{ n }}</small> }
+            </td>
+            <td>{{ p.fixture.referee }}</td>
+            <td>{{ p.weather.tempC | number:'1.0-0' }}°, {{ p.weather.rainMm }} mm</td>
+            <td class="n" [class.top]="p.sign === '1'">{{ p.p1 | percent:'1.0-0' }}</td>
+            <td class="n" [class.top]="p.sign === 'X'">{{ p.pX | percent:'1.0-0' }}</td>
+            <td class="n" [class.top]="p.sign === '2'">{{ p.p2 | percent:'1.0-0' }}</td>
+            <td><span class="sign">{{ p.sign }}</span></td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  } @else {
+    <p>Calculando predicciones…</p>
+  }
+</main>

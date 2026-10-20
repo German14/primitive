@@ -1,0 +1,13 @@
+header, main { max-width: 980px; margin: 0 auto; padding: 1.5rem 1rem; }
+h1 { font-family:'Bricolage Grotesque',system-ui,sans-serif; font-weight:800; font-size:clamp(1.8rem,5vw,3rem); margin:0 0 .25rem; }
+header p { color:var(--muted); margin:0; max-width:60ch; }
+main { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:.95rem; }
+th { text-align:left; font-family:'Bricolage Grotesque',sans-serif; font-weight:500; border-bottom:2px solid var(--ink); padding:.5rem; }
+td { padding:.6rem .5rem; border-bottom:1px solid var(--line); vertical-align:top; }
+small { display:block; color:var(--muted); font-size:.8rem; }
+.note { color:var(--pick); }
+.n { text-align:center; width:3.5rem; }
+td.n { border-left:1px solid var(--line); }
+td.top { font-weight:600; outline:2px solid var(--pick); outline-offset:-4px; }
+.sign { display:inline-grid; place-items:center; width:2.2rem; height:2.2rem; border:2px solid var(--ink); font-family:'Bricolage Grotesque',sans-serif; font-weight:800; font-size:1.2rem; }
