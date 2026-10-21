@@ -39,5 +39,9 @@ export function predict(f: Fixture, hh: TeamHistory, ah: TeamHistory, ref: Refer
   }
   const t = p1 + pX + p2; p1 /= t; pX /= t; p2 /= t;
   const sign: Sign = p1 >= pX && p1 >= p2 ? '1' : p2 >= pX ? '2' : 'X';
-  return { fixture: f, p1, pX, p2, sign, xgHome: xgH, xgAway: xgA, weather: w, notes };
+   const cat = (l: number) => {
+    const p = [pois(0, l), pois(1, l), pois(2, l)]; p.push(1 - p[0] - p[1] - p[2]);
+    return ['0', '1', '2', 'M'][p.indexOf(Math.max(...p))];
+  };
+  return { fixture: f, p1, pX, p2, sign, xgHome: xgH, xgAway: xgA, pleno: { home: cat(xgH), away: cat(xgA) }, weather: w, notes };
 }

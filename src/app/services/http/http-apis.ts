@@ -5,19 +5,10 @@ import { FixturesApi, TeamHistoryApi, RefereeHistoryApi, WeatherApi, FactorsApi 
 import { Fixture, TeamHistory, RefereeHistory, Weather, Factors } from '../../models/models';
 import { environment as env } from '../../../environments/environment';
 import { FootballClient, readCache, writeCache } from './football-client';
+import { MADRID, ymd, weekendWindow } from '../../util/dates';
 
 const cfg = env.footballData;
-const MADRID = 'Europe/Madrid';
-const ymd = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: MADRID }).format(d);
 
-/** Del viernes al lunes más cercanos (o los que estén en curso). */
-function weekendWindow(now = new Date()): { from: string; to: string } {
-  const dow = now.getDay(); // 0=dom
-  const toFri = dow === 0 ? -2 : dow === 6 ? -1 : (5 - dow + 7) % 7;
-  const from = new Date(now); from.setDate(now.getDate() + Math.max(toFri, 0));
-  const to = new Date(from); to.setDate(from.getDate() + (toFri < 0 ? 3 + toFri : 3));
-  return { from: ymd(from), to: ymd(to) };
-}
 
 /** "Avenida X 1 28036 Madrid" o "28036 Madrid" -> "Madrid". Sirve para geocodificar el clima. */
 function cityFromAddress(address: string | null | undefined, fallback: string): string {
@@ -37,8 +28,8 @@ export class SeasonData {
 
 @Injectable() export class HttpFixturesApi extends FixturesApi {
   private api = inject(FootballClient);
-  getWeekend(): Observable<Fixture[]> {
-    const { from, to } = weekendWindow();
+   getJornada(date: string): Observable<Fixture[]> {
+    const { from, to } = weekendWindow(date);
     const dayAfter = ymd(new Date(new Date(to + 'T12:00:00').getTime() + 86_400_000));
     return forkJoin({
       matches: this.api.get(`/competitions/${cfg.competition}/matches`, { dateFrom: from, dateTo: dayAfter }),

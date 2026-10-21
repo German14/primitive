@@ -3,12 +3,15 @@ import { environment } from '../../environments/environment';
 import { FixturesApi, TeamHistoryApi, RefereeHistoryApi, WeatherApi, FactorsApi } from './contracts';
 import * as M from './mock/mock-apis';
 import * as H from './http/http-apis';
+import * as R from './http/rest-apis';
 
-const pick = (mock: any, http: any) => environment.useMock ? mock : http;
+const src = environment.dataSource;
+const by = (mock: any, rest: any, fd: any) => src === 'mock' ? mock : src === 'rest' ? rest : fd;
+
 export const providers: Provider[] = [
-  { provide: FixturesApi, useClass: pick(M.MockFixturesApi, H.HttpFixturesApi) },
-  { provide: TeamHistoryApi, useClass: pick(M.MockTeamHistoryApi, H.HttpTeamHistoryApi) },
-  { provide: RefereeHistoryApi, useClass: pick(M.MockRefereeHistoryApi, H.HttpRefereeHistoryApi) },
-  { provide: WeatherApi, useClass: pick(M.MockWeatherApi, H.HttpWeatherApi) },
-  { provide: FactorsApi, useClass: pick(M.MockFactorsApi, H.HttpFactorsApi) }
+  { provide: FixturesApi, useClass: by(M.MockFixturesApi, R.RestFixturesApi, H.HttpFixturesApi) },
+  { provide: TeamHistoryApi, useClass: by(M.MockTeamHistoryApi, R.RestTeamHistoryApi, H.HttpTeamHistoryApi) },
+  { provide: RefereeHistoryApi, useClass: by(M.MockRefereeHistoryApi, R.RestRefereeHistoryApi, H.HttpRefereeHistoryApi) },
+  { provide: WeatherApi, useClass: src === 'mock' ? M.MockWeatherApi : H.HttpWeatherApi },   // Open-Meteo
+  { provide: FactorsApi, useClass: src === 'mock' ? M.MockFactorsApi : H.HttpFactorsApi }
 ];

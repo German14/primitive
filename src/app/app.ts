@@ -1,9 +1,9 @@
-import { Component, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { Component, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe, PercentPipe } from '@angular/common';
-import { catchError, of } from 'rxjs';
 import { QuinielaService } from './services/quiniela.service';
 import { Prediction } from './models/models';
+import { environment } from '../environments/environment';
+import { nextJornadaDate } from './util/dates';
 
 @Component({
   selector: 'app-root',
@@ -12,8 +12,39 @@ import { Prediction } from './models/models';
   styleUrl: './app.css'
 })
 export class App {
+  private svc = inject(QuinielaService);
+
+  readonly source = environment.dataSource;
+  readonly apiUrl = environment.dataSource === 'rest' ? environment.footballData.baseUrl : '';
+  date = signal(nextJornadaDate());
+  preds = signal<Prediction[] | null>(null);
   error = signal<string | null>(null);
-  preds = toSignal(inject(QuinielaService).predictions().pipe(
-    catchError(e => { this.error.set(String(e?.message ?? e)); return of([] as Prediction[]); })
-  ), { initialValue: null });
+  loading = signal(false);
+
+  /** Los 14 signos del boleto. */
+  boleto = computed(() => (this.preds() ?? []).filter(p => (p.fixture.position ?? 0) <= 14));
+  pleno15 = computed(() => (this.preds() ?? []).find(p => p.fixture.position === 15) ?? null);
+  totals = computed(() => {
+    const t = { '1': 0, X: 0, '2': 0 };
+    for (const p of this.boleto()) t[p.sign]++;
+    return t;
+  });
+  jornadaDate = computed(() => new Date(this.date() + 'T12:00:00'));
+
+  constructor() { this.load(); }
+
+  setDate(v: string) { if (v) { this.date.set(v); this.load(); } }
+
+  load() {
+    this.loading.set(true); this.error.set(null); this.preds.set(null);
+    this.svc.predictions(this.date()).subscribe({
+      next: p => { this.preds.set(p); this.loading.set(false); },
+      error: e => {
+        this.error.set(e?.status === 0
+          ? `No se pudo conectar con ${this.apiUrl || 'la API'} (¿está en marcha? ¿CORS?)`
+          : String(e?.message ?? e));
+        this.loading.set(false);
+      }
+    });
+  }
 }

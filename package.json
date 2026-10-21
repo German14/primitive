@@ -2,8 +2,10 @@
   "name": "primitive",
   "version": "0.1.0",
   "scripts": {
-    "start": "ng serve",
-    "build": "ng build"
+    "start": "ng serve --proxy-config proxy.conf.js",
+    "build": "ng build",
+    "mock-api": "node ../../server/mock-api.mjs",
+    "fd-proxy": "node server/fd-proxy.mjs"
   },
   "private": true,
   "dependencies": {

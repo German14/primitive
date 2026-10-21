@@ -1,5 +1,6 @@
 export interface Fixture {
-  id: number; home: string; away: string; homeId: number; awayId: number;
+  id: number; position?: number; // 1..14 + 15 (pleno al 15)
+  home: string; away: string; homeId: number; awayId: number;
   referee: string | null; kickoff: string; // ISO
   city: string; stadium: string; league: string;
 }
@@ -15,5 +16,5 @@ export interface Factors { corruption: number; economic: number; } // -1 (perjud
 export type Sign = '1' | 'X' | '2';
 export interface Prediction {
   fixture: Fixture; p1: number; pX: number; p2: number; sign: Sign;
-  xgHome: number; xgAway: number; weather: Weather | null; notes: string[];
+  xgHome: number; xgAway: number; pleno: { home: string; away: string }; weather: Weather | null; notes: string[];
 }

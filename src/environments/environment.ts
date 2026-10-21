@@ -1,32 +1,26 @@
-// export const environment = {
-//   useMock: false,
-//   apiFootball: {
-//     // Las peticiones pasan por el proxy (proxy.conf.js) que añade tu clave. La clave NO va en el navegador.
-//     baseUrl: '/api/football',
-//     leagues: [140],          // 140 = LaLiga, 141 = Segunda
-//     season: 2023,                 // temporada 2026-27
-//     totalMatches: 14,             // partidos de la quiniela
-//     historyMatches: 10,           // últimos partidos por equipo
-//     refereeSampleMatches: 20,     // partidos recientes por árbitro para tarjetas/penaltis
-//     minGapMs: 6500,               // plan gratis: 10 peticiones/min. Con plan de pago pon 0
-//     cacheHours: 6,
-//     // Opcional: fuerza los partidos exactos de la quiniela (ids de fixture de API-Football)
-//     fixtureIds: [] as number[]
-//   },
-//   // Corrupción / economía: valores -1..1 por teamId de API-Football. Manual, sin fuente pública fiable.
-//   manualFactors: {} as Record<number, { corruption: number; economic: number }>
-// };
 
 export const environment = {
-  useMock: false,
-  footballData: {
-    baseUrl: '/api/fd',       // lo reenvía proxy.conf.js añadiendo tu token
-    competition: 'PD',        // PD = LaLiga
-    totalMatches: 14,
-    historyMatches: 10,       // últimos partidos por equipo
-    minGapMs: 6500,           // plan gratis: 10 peticiones/min
-    cacheHours: 6
+  // 'rest'         -> tu API de fútbol (solo cambia api.baseUrl). Formato: docs/API-CONTRACT.md
+  // 'footballData' -> football-data.org gratis, solo LaLiga (usa proxy.conf.js + FOOTBALL_DATA_TOKEN)
+  // 'mock'         -> datos de ejemplo dentro de la app, sin red
+  dataSource: 'footballData',
+
+  api: {
+    baseUrl: '/api/fd',          // <- AQUÍ pones la URL de tu API
+    headers: {} as Record<string, string>,      // p. ej. { 'Authorization': 'Bearer ...' }
+    historyLimit: 10
   },
-  // Corrupción / economía: -1..1 por id de equipo de football-data.org. Manual.
+
+  footballData: {
+    baseUrl: 'http://localhost:3001/api/fd',
+  token: 'e7ec4bda4d1d4d68ac775e55a35863aa',
+  competition: 'PD',
+  totalMatches: 15,
+  historyMatches: 10,
+  minGapMs: 6500,
+  cacheHours: 6
+  },
+
+  // Corrupción / economía: -1..1 por id de equipo. Manual, sin fuente pública fiable.
   manualFactors: {} as Record<number, { corruption: number; economic: number }>
 };
