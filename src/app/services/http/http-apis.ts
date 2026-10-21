@@ -1,11 +1,12 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, forkJoin, map, of, catchError, shareReplay, switchMap } from 'rxjs';
-import { FixturesApi, TeamHistoryApi, RefereeHistoryApi, WeatherApi, FactorsApi } from '../contracts';
-import { Fixture, TeamHistory, RefereeHistory, Weather, Factors } from '../../models/models';
+import { Observable, forkJoin, map, of, catchError, shareReplay, switchMap, defer, from, firstValueFrom, throwError } from 'rxjs';
+import { FixturesApi, TeamHistoryApi, TeamCardStatsApi, RefereeHistoryApi, WeatherApi, FactorsApi } from '../contracts';
+import { Fixture, TeamHistory, TeamCardStats, PlayerCardHistory, RefereeHistory, Weather, Factors } from '../../models/models';
 import { environment as env } from '../../../environments/environment';
 import { FootballClient, readCache, writeCache } from './football-client';
 import { MADRID, ymd, weekendWindow } from '../../util/dates';
+import { normalizeTeamName } from '../../util/team-names';
 
 const cfg = env.footballData;
 
@@ -72,6 +73,217 @@ export class SeasonData {
   }
 }
 
+@Injectable() export class HttpTeamCardStatsApi extends TeamCardStatsApi {
+  private http = inject(HttpClient);
+  private pending = new Map<string, Observable<TeamCardStats | null>>();
+  private teamsBySeason = new Map<string, Observable<Map<string, number>>>();
+  private requestQueue: Promise<void> = Promise.resolve();
+  private nextRequestAt = 0;
+  private blockedUntil = 0;
+  private readonly minRequestGapMs = 6500;
+
+  get(teamName: string, kickoff: string, division = 'LaLiga'): Observable<TeamCardStats | null> {
+    const matchDate = new Date(kickoff);
+    if (!teamName || Number.isNaN(matchDate.getTime())) return of(null);
+    if (matchDate.getTime() < Date.now()) {
+      console.warn('[tarjetas] no se usan estadísticas de temporada para un partido pasado:', teamName, kickoff);
+      return of(null);
+    }
+    const league = this.leagueFor(division);
+    if (!league) return of(null);
+    const season = matchDate.getUTCMonth() >= 6 ? matchDate.getUTCFullYear() : matchDate.getUTCFullYear() - 1;
+    const key = `${league}:${season}:${teamName}`;
+    const existing = this.pending.get(key);
+    if (existing) return existing;
+
+    const cached = readCache<TeamCardStats>(`apifootball:cards:${key}`, 24 * 3600_000);
+    if (cached) return of(cached);
+
+    const request = this.getTeams(league, season).pipe(
+      switchMap(teams => {
+        const teamId = this.findTeamId(teams, teamName);
+        const resolvedTeam = teamId
+          ? of(teamId)
+          : this.searchTeamId(teamName, league, season);
+        return resolvedTeam.pipe(switchMap(id => {
+          if (!id) {
+            console.warn(`[tarjetas] API-Football no identifica ${teamName} en la división ${division}`);
+            return of(null);
+          }
+          return forkJoin({
+            players: this.getPlayerPages(id, league, season),
+            history: this.getTeamHistory(id, league, season)
+          }).pipe(map(({ players, history }) => {
+            const played = Math.max(0, ...players.map(player => player.appearances));
+            const yellow = players.reduce((sum, player) => sum + player.yellow, 0);
+            const red = players.reduce((sum, player) => sum + player.red, 0);
+            if (!played || !players.length) {
+              console.warn('[tarjetas] estadísticas incompletas para:', teamName);
+              if (!history.length) return null;
+            }
+            const result = {
+              matches: played,
+              avgYellow: played ? yellow / played : null,
+              avgRed: played ? red / played : null,
+              players: players.filter(player => player.yellow > 0 || player.red > 0)
+                .sort((a, b) => (b.red * 2 + b.yellow) - (a.red * 2 + a.yellow)),
+              history
+            };
+            writeCache(`apifootball:cards:${key}`, result);
+            return result;
+          }));
+        }));
+      }),
+      catchError(err => {
+        this.pending.delete(key);
+        console.warn('[tarjetas] API-Football no disponible para', teamName, err?.status ?? err);
+        return of(null);
+      }),
+      shareReplay(1)
+    );
+    this.pending.set(key, request);
+    return request;
+  }
+
+  private leagueFor(division: string): number | null {
+    if (division === 'LaLiga' || division === 'Quiniela división 1') return 140;
+    if (division === 'Quiniela división 2') return 141;
+    if (division === 'Quiniela división 10') return 142;
+    return null;
+  }
+
+  private getTeams(league: number, season: number): Observable<Map<string, number>> {
+    const key = `${league}:${season}`;
+    const existing = this.teamsBySeason.get(key);
+    if (existing) return existing;
+    const cacheKey = `apifootball:teams:${key}`;
+    const cached = readCache<Record<string, number>>(cacheKey, 7 * 24 * 3600_000);
+    if (cached) return of(new Map(Object.entries(cached).map(([name, id]) => [name, Number(id)])));
+
+    const request = this.apiRequest<any>('/api/football/teams', { params: { league, season } }).pipe(
+      map(response => {
+        const teams = new Map<string, number>();
+        for (const item of response?.response ?? []) {
+          const id = Number(item?.team?.id);
+          const name = item?.team?.name;
+          if (Number.isFinite(id) && typeof name === 'string') teams.set(normalizeTeamName(name), id);
+        }
+        if (teams.size) writeCache(cacheKey, Object.fromEntries(teams));
+        return teams;
+      }),
+      catchError(err => {
+        this.teamsBySeason.delete(key);
+        return throwError(() => err);
+      }),
+      shareReplay(1)
+    );
+    this.teamsBySeason.set(key, request);
+    return request;
+  }
+
+  private searchTeamId(teamName: string, league: number, season: number): Observable<number | null> {
+    const cacheKey = `apifootball:team-search:${league}:${season}:${normalizeTeamName(teamName)}`;
+    const cached = readCache<number>(cacheKey, 7 * 24 * 3600_000);
+    if (cached) return of(cached);
+    return this.apiRequest<any>('/api/football/teams', { params: { search: normalizeTeamName(teamName) } }).pipe(
+      map(response => {
+        const target = normalizeTeamName(teamName);
+        const candidates = (response?.response ?? []).map((item: any) => {
+          const name = normalizeTeamName(item?.team?.name ?? '');
+          const score = name === target ? 3 : name.endsWith(` ${target}`) ? 2
+            : name.startsWith(`${target} `) ? 1 : name.includes(target) ? 1 : 0;
+          return { id: Number(item?.team?.id), score };
+        }).filter((candidate: { id: number; score: number }) => Number.isFinite(candidate.id) && candidate.score > 0)
+          .sort((a: { score: number }, b: { score: number }) => b.score - a.score);
+        const id = candidates.length && candidates[0].score !== candidates[1]?.score ? candidates[0].id : null;
+        if (id) writeCache(cacheKey, id);
+        return id;
+      })
+    );
+  }
+
+  private getPlayerPages(team: number, league: number, season: number, page = 1, previous: PlayerCardHistory[] = []): Observable<PlayerCardHistory[]> {
+    return this.apiRequest<any>('/api/football/players', { params: { team, league, season, page } }).pipe(
+      switchMap(response => {
+        const players = (response?.response ?? []).map((item: any): PlayerCardHistory | null => {
+          const player = item?.player;
+          const stats = item?.statistics?.[0];
+          if (!player?.name || !stats) return null;
+          return {
+            name: player.name,
+            appearances: Number(stats.games?.appearences) || 0,
+            yellow: Number(stats.cards?.yellow) || 0,
+            red: Number(stats.cards?.red) || 0
+          };
+        }).filter((player: PlayerCardHistory | null): player is PlayerCardHistory => player !== null);
+        const accumulated = [...previous, ...players];
+        const totalPages = Number(response?.paging?.total) || 1;
+        return page < totalPages
+          ? this.getPlayerPages(team, league, season, page + 1, accumulated)
+          : of(accumulated);
+      })
+    );
+  }
+
+  private getTeamHistory(team: number, league: number, season: number): Observable<TeamHistory['matches']> {
+    return this.apiRequest<any>('/api/football/fixtures', { params: { team, league, season, last: 10 } }).pipe(
+      map(response => (response?.response ?? []).flatMap((match: any) => {
+        const status = match?.fixture?.status?.short;
+        const homeId = Number(match?.teams?.home?.id);
+        const awayId = Number(match?.teams?.away?.id);
+        const homeGoals = match?.goals?.home;
+        const awayGoals = match?.goals?.away;
+        if (!['FT', 'AET', 'PEN'].includes(status) || !Number.isFinite(homeId) || !Number.isFinite(awayId)
+          || typeof homeGoals !== 'number' || typeof awayGoals !== 'number') return [];
+        const isHome = homeId === team;
+        return [{
+          home: isHome,
+          goalsFor: isHome ? homeGoals : awayGoals,
+          goalsAgainst: isHome ? awayGoals : homeGoals
+        }];
+      }))
+    );
+  }
+
+  private findTeamId(teams: Map<string, number>, teamName: string): number | null {
+    const target = normalizeTeamName(teamName);
+    const matches = [...teams.entries()]
+      .map(([name, id]) => {
+        const canonical = normalizeTeamName(name);
+        return { id, score: canonical === target ? 3 : canonical.endsWith(` ${target}`) ? 2 : canonical.startsWith(`${target} `) ? 1 : 0 };
+      })
+      .filter(match => match.score > 0)
+      .sort((a, b) => b.score - a.score);
+    return matches.length && matches[0].score !== matches[1]?.score ? matches[0].id : null;
+  }
+
+  private apiRequest<T>(url: string, options: { params: Record<string, string | number> }): Observable<T> {
+    return defer(() => {
+      const result = this.requestQueue.then(async () => {
+        if (this.blockedUntil > Date.now()) throw new Error('API-Football ha limitado temporalmente las peticiones');
+        const delay = Math.max(0, this.nextRequestAt - Date.now());
+        if (delay) await new Promise(resolve => setTimeout(resolve, delay));
+        if (this.blockedUntil > Date.now()) throw new Error('API-Football ha limitado temporalmente las peticiones');
+        try {
+          const response = await firstValueFrom(this.http.get<T>(url, options));
+          this.nextRequestAt = Date.now() + this.minRequestGapMs;
+          return response;
+        } catch (err: any) {
+          this.nextRequestAt = Date.now() + this.minRequestGapMs;
+          if (err?.status === 429) {
+            const retryAfter = Number(err.headers?.get('Retry-After'));
+            this.blockedUntil = Date.now() + (Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 60_000);
+          }
+          throw err;
+        }
+      });
+      this.requestQueue = result.then(() => undefined, () => undefined);
+      return from(result);
+    });
+  }
+
+}
+
 /** Árbitro neutro (sin efecto en la predicción) hasta que haya una fuente gratuita fiable. */
 @Injectable() export class HttpRefereeHistoryApi extends RefereeHistoryApi {
   get(referee: string | null): Observable<RefereeHistory> {
@@ -104,16 +316,9 @@ export class SeasonData {
     if (daysAhead > 15) return of(null);
     const archive = daysAhead < -5;
     const key = `wx2:${city}:${iso}`;
-    console.log(city)
     const hit = readCache<Weather>(key, 3 * 3600_000);
     if (hit) return of(hit);
-    let cityReal:string;
-    if (city.split('s/n ').length === 1) {
-      cityReal = city.split('s/n ')[0]
-    } else {
-      cityReal = city.split('s/n ')[1]
-    }
-    return this.geocode(cityReal).pipe(
+    return this.geocode(city).pipe(
       switchMap(p => {
         if (!p) { console.warn('[clima] ciudad no encontrada:', city); return of(null); }
         const url = archive ? 'https://archive-api.open-meteo.com/v1/archive' : 'https://api.open-meteo.com/v1/forecast';

@@ -6,6 +6,14 @@ export interface Fixture {
 }
 export interface PastMatch { goalsFor: number; goalsAgainst: number; home: boolean; }
 export interface TeamHistory { teamId: number; matches: PastMatch[]; }
+export interface PlayerCardHistory { name: string; appearances: number; yellow: number; red: number; }
+export interface TeamCardStats {
+  matches: number;
+  avgYellow: number | null;
+  avgRed: number | null;
+  players?: PlayerCardHistory[];
+  history?: PastMatch[];
+}
 export interface RefereeHistory {
   referee: string | null; matches: number;
   avgYellow: number; avgRed: number; penaltiesPerMatch: number;
@@ -15,6 +23,6 @@ export interface Weather { rainMm: number; windKmh: number; tempC: number; sourc
 export interface Factors { corruption: number; economic: number; } // -1 (perjudica) .. +1 (favorece)
 export type Sign = '1' | 'X' | '2';
 export interface Prediction {
-  fixture: Fixture; p1: number; pX: number; p2: number; sign: Sign;
-  xgHome: number; xgAway: number; pleno: { home: string; away: string }; weather: Weather | null; notes: string[];
+  fixture: Fixture; p1: number; pX: number; p2: number; sign: Sign | null;
+  xgHome: number | null; xgAway: number | null; pleno: { home: string; away: string }; weather: Weather | null; notes: string[];
 }

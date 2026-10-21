@@ -1,11 +1,25 @@
 <header>
   <p class="eyebrow">Quiniela · fuente: {{ source }}@if (apiUrl) { · {{ apiUrl }} }</p>
-  <h1>Jornada del {{ jornadaDate() | date:'EEEE d MMMM' }}</h1>
-  <p class="lead">Estimación estadística con la forma de los clubes, el árbitro, el clima y ajustes manuales. No es una garantía.</p>
+  @if (source === 'quiniela') {
+    <h1>Quiniela · Jornada {{ jornada() }} / temporada {{ temporada() }}</h1>
+    <p class="lead">Boleto oficial de 15 partidos. Sin historial de goles suficiente, el modelo no inventa signos ni probabilidades.</p>
+  } @else {
+    <h1>Jornada del {{ jornadaDate() | date:'EEEE d MMMM' }}</h1>
+    <p class="lead">Estimación estadística con la forma de los clubes, tarjetas históricas, clima y ajustes manuales. No es una garantía.</p>
+  }
   <div class="controls">
-    <label>Fecha de la jornada
-      <input type="date" [value]="date()" (change)="setDate($any($event.target).value)">
-    </label>
+    @if (source === 'quiniela') {
+      <label>Temporada
+        <input type="number" min="1" [value]="temporada()" (change)="setTemporada($any($event.target).value)">
+      </label>
+      <label>Jornada
+        <input type="number" min="1" [value]="jornada()" (change)="setJornada($any($event.target).value)">
+      </label>
+    } @else {
+      <label>Fecha de la jornada
+        <input type="date" [value]="date()" (change)="setDate($any($event.target).value)">
+      </label>
+    }
     <button type="button" (click)="load()" [disabled]="loading()">Recargar</button>
   </div>
 </header>
@@ -26,7 +40,7 @@
       <section class="boleto" aria-label="Boleto">
         <div class="slip">
           @for (p of boleto(); track p.fixture.id) {
-            <span><i>{{ p.fixture.position }}</i><b>{{ p.sign }}</b></span>
+            <span><i>{{ p.fixture.position }}</i><b>{{ p.sign ?? '—' }}</b></span>
           }
           @if (pleno15(); as p15) {
             <span class="p15"><i>15</i><b>{{ p15.pleno.home }}-{{ p15.pleno.away }}</b></span>
@@ -55,7 +69,7 @@
                 <small>{{ w.place }} · {{ w.source }}</small>
               } @else { <small>Sin previsión de clima</small> }
             </div>
-            <div class="sign"><b>{{ p.sign }}</b>@if (p.fixture.position === 15) { <small>Pleno {{ p.pleno.home }}-{{ p.pleno.away }}</small> }</div>
+            <div class="sign"><b>{{ p.sign ?? '—' }}</b>@if (p.fixture.position === 15) { <small>Pleno {{ p.pleno.home }}-{{ p.pleno.away }}</small> }</div>
           </article>
         }
       </section>

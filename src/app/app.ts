@@ -15,7 +15,11 @@ export class App {
   private svc = inject(QuinielaService);
 
   readonly source = environment.dataSource;
-  readonly apiUrl = environment.dataSource === 'rest' ? environment.footballData.baseUrl : '';
+  readonly apiUrl = environment.dataSource === 'quiniela'
+    ? environment.quiniela.baseUrl
+    : environment.dataSource === 'rest' ? environment.footballData.baseUrl : '';
+  jornada = signal(environment.quiniela.jornada);
+  temporada = signal(environment.quiniela.temporada);
   date = signal(nextJornadaDate());
   preds = signal<Prediction[] | null>(null);
   error = signal<string | null>(null);
@@ -27,7 +31,7 @@ export class App {
   totals = computed(() => {
     console.log(this.preds())
     const t = { '1': 0, X: 0, '2': 0 };
-    for (const p of this.boleto()) t[p.sign]++;
+    for (const p of this.boleto()) if (p.sign) t[p.sign]++;
     return t;
   });
   jornadaDate = computed(() => new Date(this.date() + 'T12:00:00'));
@@ -35,10 +39,12 @@ export class App {
   constructor() { this.load(); }
 
   setDate(v: string) { if (v) { this.date.set(v); this.load(); } }
+  setJornada(v: string) { const n = Number(v); if (Number.isInteger(n) && n > 0) { this.jornada.set(n); this.load(); } }
+  setTemporada(v: string) { const n = Number(v); if (Number.isInteger(n) && n > 0) { this.temporada.set(n); this.load(); } }
 
   load() {
     this.loading.set(true); this.error.set(null); this.preds.set(null);
-    this.svc.predictions(this.date()).subscribe({
+    this.svc.predictions(this.date(), this.jornada(), this.temporada()).subscribe({
       next: p => { this.preds.set(p); this.loading.set(false); },
       error: e => {
         this.error.set(e?.status === 0

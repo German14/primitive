@@ -47,9 +47,6 @@ export class FootballClient {
           .get(env.footballData.baseUrl + path, {
             params,
             responseType: "text",
-            headers: env.footballData.token
-              ? { "X-Auth-Token": env.footballData.token }
-              : {},
           })
           .pipe(
             map((txt) => {

@@ -3,6 +3,7 @@ import { Observable, of, delay } from "rxjs";
 import {
   FixturesApi,
   TeamHistoryApi,
+  TeamCardStatsApi,
   RefereeHistoryApi,
   WeatherApi,
   FactorsApi,
@@ -10,6 +11,7 @@ import {
 import {
   Fixture,
   TeamHistory,
+  TeamCardStats,
   RefereeHistory,
   Weather,
   Factors,
@@ -29,6 +31,13 @@ export class MockFixturesApi extends FixturesApi {
 export class MockTeamHistoryApi extends TeamHistoryApi {
   get(teamId: number): Observable<TeamHistory> {
     return of({ teamId, matches: mockMatches(teamId) });
+  }
+}
+@Injectable()
+export class MockTeamCardStatsApi extends TeamCardStatsApi {
+  get(teamName: string): Observable<TeamCardStats> {
+    const value = [...teamName].reduce((sum, char) => sum + char.charCodeAt(0), 0);
+    return of({ matches: 10, avgYellow: 1.5 + (value % 20) / 10, avgRed: (value % 3) / 20 });
   }
 }
 @Injectable()
