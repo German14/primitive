@@ -1,10 +1,12 @@
-import { Fixture, TeamHistory, TeamCardStats, RefereeHistory, Weather, Factors, Prediction, Sign } from '../models/models';
+import { Fixture, TeamHistory, TeamCardStats, RefereeHistory, Weather, Factors, Prediction, Sign, Absence } from '../models/models';
 
 // Pesos ajustables. corruption/economic multiplican el valor manual (-1..1) de cada equipo.
 export const WEIGHTS = {
   homeAdvantage: 1.12, refereeHome: 0.25, rainGoals: 0.03, windGoals: 0.004,
   corruption: 0.10, economic: 0.12, yellowCardRedRisk: 0.01,
-  redCardGoalReduction: 0.65, redCardOpponentBoost: 1.25
+  redCardGoalReduction: 0.65, redCardOpponentBoost: 1.25,
+  // Bajas: un jugador clave (weight 1) ausente baja ~12% el ataque propio y sube ~8% el del rival; un apercibido pesa 15%
+  absenceOwn: 0.12, absenceOpp: 0.08, warnedFactor: 0.15
 };
 
 const avg = (xs: number[]) => xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 1.2;
@@ -13,7 +15,8 @@ const pois = (k: number, l: number) => Math.exp(-l) * Math.pow(l, k) / fact(k);
 
 export function predict(f: Fixture, hh: TeamHistory, ah: TeamHistory, ref: RefereeHistory, w: Weather | null,
                         fh: Factors, fa: Factors, homeCards: TeamCardStats | null = null,
-                        awayCards: TeamCardStats | null = null): Prediction {
+                        awayCards: TeamCardStats | null = null,
+                        homeAbs: Absence[] = [], awayAbs: Absence[] = []): Prediction {
   const notes: string[] = [];
   const homeHistory = hh.matches.length ? hh.matches : homeCards?.history ?? [];
   const awayHistory = ah.matches.length ? ah.matches : awayCards?.history ?? [];
@@ -57,6 +60,15 @@ export function predict(f: Fixture, hh: TeamHistory, ah: TeamHistory, ref: Refer
   const adj = (x: Factors) => 1 + x.corruption * WEIGHTS.corruption + x.economic * WEIGHTS.economic;
   xgH *= adj(fh); xgA *= adj(fa);
   if (fh.corruption || fh.economic || fa.corruption || fa.economic) notes.push('Factores manuales aplicados');
+
+  // Bajas (lesiones, sanciones, apercibidos)
+  const impact = (abs: Absence[]) => Math.min(2, abs.reduce((s, a) => s + (a.weight ?? 0.3) * (a.reason === 'apercibido' ? WEIGHTS.warnedFactor : 1), 0));
+  const impH = impact(homeAbs), impA = impact(awayAbs);
+  xgH *= (1 - WEIGHTS.absenceOwn * impH) * (1 + WEIGHTS.absenceOpp * impA);
+  xgA *= (1 - WEIGHTS.absenceOwn * impA) * (1 + WEIGHTS.absenceOpp * impH);
+  const label = { lesion: 'lesión', sancion: 'sanción', apercibido: 'apercibido' } as const;
+  if (homeAbs.length) notes.push(`Bajas ${f.home}: ${homeAbs.map(a => `${a.player} (${label[a.reason]})`).join(', ')}`);
+  if (awayAbs.length) notes.push(`Bajas ${f.away}: ${awayAbs.map(a => `${a.player} (${label[a.reason]})`).join(', ')}`);
 
   const outcome = (homeGoals: number, awayGoals: number) => {
     let p1 = 0, pX = 0, p2 = 0;

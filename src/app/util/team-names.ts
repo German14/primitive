@@ -65,3 +65,28 @@ export function normalizeTeamName(name: string): string {
     .toLowerCase().replace(/[().]/g, ' ').replace(/\s+/g, ' ').trim();
   return aliases[normalized] ?? normalized;
 }
+
+
+// --- Emparejar el nombre de la quiniela ("ATH.CLUB") con el de football-data.org ("Athletic Club") ---
+const STOP = new Set(['fc', 'cf', 'cd', 'ud', 'rcd', 'sd', 'ca', 'rc', 'club', 'de', 'del', 'la', 'futbol', 'balompie', 'sad', 'real']);
+
+function tokenKey(name: string): string {
+  return normalizeTeamName(name).split(' ').filter(t => t && !STOP.has(t)).sort().join(' ');
+}
+
+export interface TeamLike { name?: string; shortName?: string; tla?: string; }
+
+/** Busca el equipo por nombre ignorando FC/CF/Real/Club..., primero igualdad exacta y luego coincidencia única parcial. */
+export function findTeam<T extends TeamLike>(teams: T[], quinielaName: string): T | undefined {
+  const target = tokenKey(quinielaName);
+  if (!target) return undefined;
+  const keys = (t: T) => [t.name, t.shortName].filter((n): n is string => !!n).map(tokenKey);
+  const exact = teams.find(t => keys(t).includes(target));
+  if (exact) return exact;
+  const wanted = target.split(' ');
+  const partial = teams.filter(t => keys(t).some(k => wanted.every(w => k.split(' ').includes(w))));
+  return partial.length === 1 ? partial[0] : undefined;
+}
+
+/** Clave comparable de un equipo (ignora mayúsculas, acentos, FC/CF/Real/Club...). */
+export const teamTokenKey = tokenKey;

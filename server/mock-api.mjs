@@ -41,6 +41,13 @@ http.createServer((req, res) => {
   const send = (code, body) => { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(body)); };
   let m;
   if (url.pathname === '/health') return send(200, { ok: true });
+  if (url.pathname === '/absences') {   // datos FICTICIOS, solo para probar el adaptador
+    const team = url.searchParams.get('team') ?? '';
+    return send(200, { team, absences: team.length % 2 ? [] : [
+      { player: 'Jugador Demo 1', reason: 'sancion', weight: 0.8 },
+      { player: 'Jugador Demo 2', reason: 'injured', weight: 0.5 },
+      { player: 'Jugador Demo 3', reason: 'yellow card', weight: 0.4 } ] });
+  }
   if (url.pathname === '/quiniela') {
     const date = url.searchParams.get('date');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date ?? '')) return send(400, { error: 'date=YYYY-MM-DD requerido' });

@@ -26,3 +26,11 @@ export interface Prediction {
   fixture: Fixture; p1: number; pX: number; p2: number; sign: Sign | null;
   xgHome: number | null; xgAway: number | null; pleno: { home: string; away: string }; weather: Weather | null; notes: string[];
 }
+
+export type AbsenceReason = 'lesion' | 'sancion' | 'apercibido';
+export interface Absence {
+  player: string;
+  reason: AbsenceReason;   // lesión, sanción (expulsado/ciclo) o apercibido (a una tarjeta de sanción)
+  weight?: number;         // importancia del jugador 0..1 (1 = clave). Por defecto 0.3
+  until?: string;          // opcional, fecha de regreso
+}

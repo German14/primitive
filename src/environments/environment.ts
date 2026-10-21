@@ -21,6 +21,16 @@ export const environment = {
     cacheHours: 6
   },
 
+  // Tarjetas por jugador/equipo vienen de API-Football, cuyo plan gratis NO da la temporada actual (solo 2022-2024).
+  // Déjalo en false salvo que tengas un plan de pago (y API_FOOTBALL_KEY en el proxy).
+  cardStats: { enabled: false },
+
+  // Bajas (lesiones, sanciones, apercibidos):
+  //  'manual' -> las escribes en src/app/data/absences.ts
+  //  'rest'   -> una API tuya/de pago: GET {baseUrl}/absences?team=..&teamId=..  (ver absences-apis.ts)
+  //  'none'   -> sin bajas
+  absences: { source: 'manual' as 'manual' | 'rest' | 'none', baseUrl: '', headers: {} as Record<string, string> },
+
   quiniela: {
     baseUrl: 'https://api.eduardolosilla.es/escrutinios',
     jornada: 16,

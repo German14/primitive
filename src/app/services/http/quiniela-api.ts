@@ -4,7 +4,7 @@ import { Observable, catchError, forkJoin, map, of, shareReplay } from 'rxjs';
 import { environment as env } from '../../../environments/environment';
 import { Fixture, TeamHistory } from '../../models/models';
 import { FixturesApi, TeamHistoryApi } from '../contracts';
-import { normalizeTeamName, teamCity } from '../../util/team-names';
+import { findTeam, teamCity } from '../../util/team-names';
 import { FootballClient } from './football-client';
 import { SeasonData } from './http-apis';
 
@@ -131,10 +131,10 @@ export class QuinielaTeamHistoryApi extends TeamHistoryApi {
   get(teamId: number, teamName = '', league = ''): Observable<TeamHistory> {
     if (league !== 'Quiniela división 1') return of({ teamId, matches: [] });
     return forkJoin({ teams: this.teamDirectory$, matches: this.season.finished$ }).pipe(map(({ teams, matches }) => {
-      const name = normalizeTeamName(teamName);
-      const team = teams.find((item: any) => normalizeTeamName(item?.shortName ?? item?.name ?? '') === name);
+      const team = findTeam<any>(teams, teamName);
       if (!team?.id) {
-        console.warn('[historial] equipo de la quiniela no identificado en football-data.org:', teamName);
+        console.warn('[historial] equipo de la quiniela no identificado en football-data.org:', teamName,
+          '| nombres disponibles:', teams.map((t: any) => `${t.name} / ${t.shortName}`));
         return { teamId, matches: [] };
       }
       return {

@@ -1,5 +1,5 @@
 import { Observable } from 'rxjs';
-import { Fixture, TeamHistory, TeamCardStats, RefereeHistory, Weather, Factors } from '../models/models';
+import { Fixture, TeamHistory, TeamCardStats, RefereeHistory, Weather, Factors, Absence } from '../models/models';
 
 export abstract class FixturesApi {
   abstract getJornada(date: string, jornada?: number, temporada?: number): Observable<Fixture[]>;
@@ -13,3 +13,8 @@ export abstract class TeamCardStatsApi {
 export abstract class RefereeHistoryApi { abstract get(referee: string | null): Observable<RefereeHistory>; }
 export abstract class WeatherApi { abstract get(city: string, iso: string): Observable<Weather | null>; }
 export abstract class FactorsApi { abstract get(teamId: number): Observable<Factors>; }
+
+/** Bajas del equipo (lesiones, sancionados, apercibidos). Se puede alimentar a mano o desde una API. */
+export abstract class AbsencesApi {
+  abstract get(teamName: string, teamId: number): Observable<Absence[]>;
+}
