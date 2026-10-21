@@ -91,7 +91,7 @@ export class SeasonData {
   private geocode(city: string): Observable<{ latitude: number; longitude: number; name: string } | null> {
     const candidates = [...new Set([city, city.replace(/\(.*\)/, '').trim(), city.split(/[-,/]/)[0].trim()])].filter(Boolean);
     const tryNext = (i: number): Observable<any> => i >= candidates.length ? of(null) :
-      this.http.get<any>('https://geocoding-api.open-meteo.com/v1/search', { params: { name: candidates[i], count: 1, language: 'es', countryCode: 'ES' } })
+      this.http.get<any>('https://geocoding-api.open-meteo.com/v1/search', { params: { name: candidates[i].trim(), count: 1, language: 'es', countryCode: 'ES' } })
         .pipe(switchMap(g => g.results?.[0] ? of(g.results[0]) : tryNext(i + 1)));
     return tryNext(0);
   }
@@ -104,10 +104,16 @@ export class SeasonData {
     if (daysAhead > 15) return of(null);
     const archive = daysAhead < -5;
     const key = `wx2:${city}:${iso}`;
+    console.log(city)
     const hit = readCache<Weather>(key, 3 * 3600_000);
     if (hit) return of(hit);
-
-    return this.geocode(city).pipe(
+    let cityReal:string;
+    if (city.split('s/n ').length === 1) {
+      cityReal = city.split('s/n ')[0]
+    } else {
+      cityReal = city.split('s/n ')[1]
+    }
+    return this.geocode(cityReal).pipe(
       switchMap(p => {
         if (!p) { console.warn('[clima] ciudad no encontrada:', city); return of(null); }
         const url = archive ? 'https://archive-api.open-meteo.com/v1/archive' : 'https://api.open-meteo.com/v1/forecast';

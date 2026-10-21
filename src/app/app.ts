@@ -25,6 +25,7 @@ export class App {
   boleto = computed(() => (this.preds() ?? []).filter(p => (p.fixture.position ?? 0) <= 14));
   pleno15 = computed(() => (this.preds() ?? []).find(p => p.fixture.position === 15) ?? null);
   totals = computed(() => {
+    console.log(this.preds())
     const t = { '1': 0, X: 0, '2': 0 };
     for (const p of this.boleto()) t[p.sign]++;
     return t;
