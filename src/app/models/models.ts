@@ -14,6 +14,33 @@ export interface TeamCardStats {
   players?: PlayerCardHistory[];
   history?: PastMatch[];
 }
+export interface TeamSeasonStats {
+  division: string;
+  attackFactor: number | null;
+  creativeFactor: number | null;
+  defenseFactor: number | null;
+  historicalAttackFactor: number | null;
+  historicalDefenseFactor: number | null;
+  goals: number | null;
+  assists: number | null;
+  yellowCards: number | null;
+  redCards: number | null;
+  gamesPlayed: number | null;
+  goalsConceded: number | null;
+  goalsPerMatch: number | null;
+  assistsPerMatch: number | null;
+  goalsConcededPerMatch: number | null;
+  yellowCardsPerMatch: number | null;
+  redCardsPerMatch: number | null;
+  pointsPerMatch: number | null;
+  leagueGoalsPerTeamMatch: number | null;
+  leaders: {
+    goals: string[];
+    assists: string[];
+    yellowCards: string[];
+    redCards: string[];
+  };
+}
 export interface RefereeHistory {
   referee: string | null; matches: number;
   avgYellow: number; avgRed: number; penaltiesPerMatch: number;
@@ -23,7 +50,7 @@ export interface Weather { rainMm: number; windKmh: number; tempC: number; sourc
 export interface Factors { corruption: number; economic: number; } // -1 (perjudica) .. +1 (favorece)
 export type Sign = '1' | 'X' | '2';
 export interface Prediction {
-  fixture: Fixture; p1: number; pX: number; p2: number; sign: Sign | null;
+  fixture: Fixture; p1: number | null; pX: number | null; p2: number | null; sign: Sign | null;
   xgHome: number | null; xgAway: number | null; pleno: { home: string; away: string }; weather: Weather | null; notes: string[];
 }
 
@@ -33,4 +60,6 @@ export interface Absence {
   reason: AbsenceReason;   // lesión, sanción (expulsado/ciclo) o apercibido (a una tarjeta de sanción)
   weight?: number;         // importancia del jugador 0..1 (1 = clave). Por defecto 0.3
   until?: string;          // opcional, fecha de regreso
+  details?: string;
+  availability?: number;
 }

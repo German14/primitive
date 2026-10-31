@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { DatePipe, DecimalPipe, PercentPipe } from '@angular/common';
+import { DOCUMENT, DatePipe, DecimalPipe, PercentPipe } from '@angular/common';
 import { QuinielaService } from './services/quiniela.service';
+import { PredictionArchive } from './services/prediction-archive';
 import { Prediction } from './models/models';
 import { environment } from '../environments/environment';
 import { nextJornadaDate } from './util/dates';
@@ -13,6 +14,8 @@ import { nextJornadaDate } from './util/dates';
 })
 export class App {
   private svc = inject(QuinielaService);
+  private archive = inject(PredictionArchive);
+  private document = inject(DOCUMENT);
 
   readonly source = environment.dataSource;
   readonly apiUrl = environment.dataSource === 'quiniela'
@@ -24,6 +27,7 @@ export class App {
   preds = signal<Prediction[] | null>(null);
   error = signal<string | null>(null);
   loading = signal(false);
+  archiveStatus = signal<string | null>(null);
 
   /** Los 14 signos del boleto. */
   boleto = computed(() => (this.preds() ?? []).filter(p => (p.fixture.position ?? 0) <= 14));
@@ -43,9 +47,23 @@ export class App {
   setTemporada(v: string) { const n = Number(v); if (Number.isInteger(n) && n > 0) { this.temporada.set(n); this.load(); } }
 
   load() {
-    this.loading.set(true); this.error.set(null); this.preds.set(null);
+    this.loading.set(true); this.error.set(null); this.preds.set(null); this.archiveStatus.set(null);
     this.svc.predictions(this.date(), this.jornada(), this.temporada()).subscribe({
-      next: p => { this.preds.set(p); this.loading.set(false); },
+      next: p => {
+        this.preds.set(p);
+        this.loading.set(false);
+        if (this.source === 'quiniela' && p.length) {
+          try {
+            const result = this.archive.saveIfUpcoming(this.temporada(), this.jornada(), p);
+            this.archiveStatus.set(result === 'saved'
+              ? 'Predicción previa archivada en este navegador; no se reemplazará al recargar.'
+              : result === 'exists' ? 'Ya existe una predicción archivada para esta jornada.'
+                : 'No se archivó: la jornada empezó o faltan probabilidades completas.');
+          } catch (error) {
+            this.archiveStatus.set(`No se pudo guardar el archivo de predicciones: ${String(error)}`);
+          }
+        }
+      },
       error: e => {
         this.error.set(e?.status === 0
           ? `No se pudo conectar con ${this.apiUrl || 'la API'} (¿está en marcha? ¿CORS?)`
@@ -53,5 +71,26 @@ export class App {
         this.loading.set(false);
       }
     });
+  }
+
+  exportPredictions() {
+    try {
+      const content = this.archive.exportJson();
+      const blob = new Blob([content], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = this.archiveDocumentLink(url);
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 0);
+      this.archiveStatus.set(`Archivo exportado (${this.archive.count()} jornadas guardadas).`);
+    } catch (error) {
+      this.archiveStatus.set(`No se pudo exportar el archivo de predicciones: ${String(error)}`);
+    }
+  }
+
+  private archiveDocumentLink(url: string): HTMLAnchorElement {
+    const link = this.document.createElement('a');
+    link.href = url;
+    link.download = 'primitive-predictions-v1.json';
+    return link;
   }
 }

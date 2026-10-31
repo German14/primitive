@@ -6,7 +6,7 @@ const aliases: Record<string, string> = {
   'r oviedo': 'real oviedo',
   'r madrid': 'real madrid',
   'rayo': 'rayo vallecano',
-  'deportivo': 'deportivo la coruna',
+  'deportivo': 'deportivo',
   'leganes': 'leganes',
   'logrono f': 'd ux logroño',
   'badalona w f': 'fc badalona women',
