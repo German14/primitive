@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, combineLatest, concat, forkJoin, map, of, switchMap } from 'rxjs';
+import { AbsenceWeights } from './absence-weights';
 import { FixturesApi, TeamHistoryApi, TeamCardStatsApi, RefereeHistoryApi, WeatherApi, FactorsApi, AbsencesApi } from './contracts';
 import { Prediction } from '../models/models';
 import { predict } from '../prediction/model';
@@ -13,6 +14,7 @@ export class QuinielaService {
   private weather = inject(WeatherApi);
   private factors = inject(FactorsApi);
   private absences = inject(AbsencesApi);
+  private weights = inject(AbsenceWeights);
 
   /** Predicciones de la jornada (14 partidos + pleno al 15) de la fecha indicada (YYYY-MM-DD). */
   predictions(date: string, jornada?: number, temporada?: number): Observable<Prediction[]> {
@@ -25,7 +27,8 @@ export class QuinielaService {
             hh: this.teams.get(fx.homeId, fx.home, fx.league), ah: this.teams.get(fx.awayId, fx.away, fx.league), ref: this.refs.get(fx.referee),
             w: this.weather.get(fx.city, fx.kickoff),
             fh: this.factors.get(fx.homeId), fa: this.factors.get(fx.awayId),
-            habs: this.absences.get(fx.home, fx.homeId), aabs: this.absences.get(fx.away, fx.awayId)
+            habs: this.absences.get(fx.home, fx.homeId).pipe(switchMap(a => this.weights.enrich(fx.home, a))),
+            aabs: this.absences.get(fx.away, fx.awayId).pipe(switchMap(a => this.weights.enrich(fx.away, a)))
           }).pipe(switchMap(d => {
             const prediction = predict(fx, d.hh, d.ah, d.ref, d.w, d.fh, d.fa, null, null, d.habs, d.aabs);
             if (!fx.league.startsWith('Quiniela') && fx.league !== 'LaLiga') return of(prediction);

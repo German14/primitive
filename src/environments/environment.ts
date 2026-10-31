@@ -31,6 +31,9 @@ export const environment = {
   //  'none'   -> sin bajas
   absences: { source: 'manual' as 'manual' | 'rest' | 'none', baseUrl: '', headers: {} as Record<string, string> },
 
+  // JSON generados por los scripts (npm run data:laliga / data:squads). Se sirven desde public/data
+  data: { baseUrl: 'data' },
+
   quiniela: {
     baseUrl: 'https://api.eduardolosilla.es/escrutinios',
     jornada: 16,

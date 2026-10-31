@@ -5,7 +5,10 @@
     "start": "ng serve --proxy-config proxy.conf.js",
     "build": "ng build",
     "mock-api": "node ../../server/mock-api.mjs",
-    "fd-proxy": "node server/fd-proxy.mjs"
+    "fd-proxy": "node server/fd-proxy.mjs",
+    "data:laliga": "node scripts/scrape-laliga.mjs",
+    "data:squads": "node scripts/fetch-squads.mjs",
+    "data:test": "node --test scripts/test/*.test.mjs"
   },
   "private": true,
   "dependencies": {
@@ -20,6 +23,7 @@
     "@angular/build": "^22.2.0",
     "@angular/cli": "^22.2.0",
     "@angular/compiler-cli": "^22.2.0",
+    "cheerio": "^1.2.0",
     "typescript": "~6.0.0"
   }
 }

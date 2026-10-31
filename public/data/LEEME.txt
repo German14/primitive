@@ -1,0 +1,1 @@
+Los JSON de esta carpeta los generan los scripts: npm run data:laliga y npm run data:squads

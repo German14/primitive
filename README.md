@@ -36,3 +36,17 @@ npm start
 ```
 
 El plan de API-Football debe permitir consultas de equipos, plantillas, jugadores y partidos. Para partidos pasados no se reutilizan las estadísticas actuales de temporada. Las amarillas y rojas de los jugadores contribuyen al riesgo agregado del equipo; no se consultan convocatorias ni sanciones oficiales, por lo que no se puede asegurar qué jugador jugará o estará suspendido.
+
+## Datos en JSON (uso personal, no comercial)
+Los scripts guardan JSON en `public/data/` y la app los lee (si no existen, sigue funcionando sin ellos).
+
+    npm run data:laliga                       # clubes + goleadores, asistencias y tarjetas de 1ª y 2ª (laliga.com)
+    npm run data:laliga -- --only=stats --division=easports --pages=3
+    FOOTBALL_DATA_TOKEN=... npm run data:squads   # plantillas de 1ª (API de football-data.org)
+    npm run data:test                         # pruebas de los analizadores
+
+- El scraper identifica el programa, espera 2 s entre peticiones y **respeta robots.txt**. Úsalo con moderación y solo para uso personal.
+- Si una página cambia y no se reconoce, guarda el HTML en `scripts/.raw/` y lo avisa. Para probar un HTML guardado desde el navegador: `node scripts/scrape-laliga.mjs --parse-file=pagina.html`.
+- Las plantillas de laliga.com las carga JavaScript y no están en el HTML, por eso salen de la API de football-data.org.
+- Con `clubs.json` y los goleadores/asistentes, el peso de cada baja (`absences.ts`) se calcula solo si no pones `weight`.
+- ESPN no se usa: sus términos prohíben el acceso automatizado.
